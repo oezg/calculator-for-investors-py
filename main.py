@@ -1,73 +1,95 @@
-import csv
-import sqlalchemy.orm
+MAIN_MENU = {
+    'name': 'MAIN MENU',
+    '0': 'Exit',
+    '1': 'CRUD operations',
+    '2': 'Show top ten companies by criteria',
+}
 
-engine = sqlalchemy.create_engine("sqlite:///investor.db")
-Base = sqlalchemy.orm.declarative_base()
-Session = sqlalchemy.orm.sessionmaker(bind=engine)
+CRUD_MENU = {
+    'name': 'CRUD MENU',
+    '0': 'Back',
+    '1': 'Create a company',
+    '2': 'Read a company',
+    '3': 'Update a company',
+    '4': 'Delete a company',
+    '5': 'List all companies',
+}
 
-
-class Companies(Base):
-    __tablename__ = 'companies'
-
-    ticker = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-    name = sqlalchemy.Column(sqlalchemy.String)
-    sector = sqlalchemy.Column(sqlalchemy.String)
-
-
-class Financial(Base):
-    __tablename__ = 'financial'
-
-    ticker = sqlalchemy.Column(sqlalchemy.String, primary_key=True)
-    ebitda = sqlalchemy.Column(sqlalchemy.Float)
-    sales = sqlalchemy.Column(sqlalchemy.Float)
-    net_profit = sqlalchemy.Column(sqlalchemy.Float)
-    market_price = sqlalchemy.Column(sqlalchemy.Float)
-    net_debt = sqlalchemy.Column(sqlalchemy.Float)
-    assets = sqlalchemy.Column(sqlalchemy.Float)
-    equity = sqlalchemy.Column(sqlalchemy.Float)
-    cash_equivalents = sqlalchemy.Column(sqlalchemy.Float)
-    liabilities = sqlalchemy.Column(sqlalchemy.Float)
+TOP_TEN_MENU = {
+    'name': 'TOP TEN MENU',
+    '0': 'Back',
+    '1': 'List by ND/EBITDA',
+    '2': 'List by ROE',
+    '3': 'List by ROA',
+}
 
 
-def main():
-    Base.metadata.create_all(engine)
-    read_companies()
-    read_financial()
-    print("Database created successfully!")
+def main() -> None:
+    match get_option(MAIN_MENU):
+        case '0':
+            print('Have a nice day!')
+        case '1':
+            crud()
+        case '2':
+            top_ten()
 
 
-def read_companies():
-    session = Session()
-    with open("test/companies.csv") as companies_csv:
-        companies_reader = csv.DictReader(companies_csv)
-        for company in companies_reader:
-            session.add(Companies(ticker=company['ticker'], name=company['name'], sector=company['sector']))
-        session.commit()
-    session.close()
+def crud() -> None:
+    match get_option(CRUD_MENU):
+        case '1':
+            create_company()
+        case '2':
+            read_company()
+        case '3':
+            update_company()
+        case '4':
+            delete_company()
+        case '5':
+            list_all_companies()
+    main()
 
 
-def read_financial():
-    session = Session()
-    with open("test/financial.csv") as financial_csv:
-        financial_reader = csv.DictReader(financial_csv)
-        for financial in financial_reader:
-            session.add(
-                Financial(
-                    ticker=financial['ticker'],
-                    ebitda=financial['ebitda'] if financial['ebitda'] else None,
-                    sales=financial['sales'] if financial['sales'] else None,
-                    net_profit=financial['net_profit'] if financial['net_profit'] else None,
-                    market_price=financial['market_price'] if financial['market_price'] else None,
-                    net_debt=financial['net_debt'] if financial['net_debt'] else None,
-                    assets=financial['assets'] if financial['assets'] else None,
-                    equity=financial['equity'] if financial['equity'] else None,
-                    cash_equivalents=financial['cash_equivalents'] if financial['cash_equivalents'] else None,
-                    liabilities=financial['liabilities'] if financial['liabilities'] else None,
-                )
-            )
-        session.commit()
-    session.close()
+def top_ten() -> None:
+    match get_option(TOP_TEN_MENU):
+        case '0':
+            main()
+        case _:
+            print('Not implemented!')
+            main()
+
+
+def create_company():
+    ...
+
+
+def read_company():
+    ...
+
+
+def update_company():
+    ...
+
+
+def delete_company():
+    ...
+
+
+def list_all_companies():
+    ...
+
+
+def get_option(menu: dict[str, str]) -> str:
+    while (option := input(get_menu(menu))) not in menu:
+        print('Invalid option!')
+    return option
+
+
+def get_menu(menu: dict[str, str]) -> str:
+    menu_string = '\n'.join(f'{k} {v}' for k, v in menu.items() if k != 'name')
+    return f'\n{menu["name"]}\n{menu_string}\n\nEnter an option:\n'
 
 
 if __name__ == '__main__':
+    from investor import prepare_database
+    prepare_database()
     main()
