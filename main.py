@@ -1,3 +1,5 @@
+import investor
+
 MAIN_MENU = {
     'name': 'MAIN MENU',
     '0': 'Exit',
@@ -59,7 +61,26 @@ def top_ten() -> None:
 
 
 def create_company():
-    ...
+    session = investor.Session()
+    ticker = input("Enter ticker (in the format 'MOON'):\n")
+    session.add(investor.Companies(ticker=ticker, name=input("Enter company (in the format 'Moon Corp'):\n"),
+        sector=input("Enter industries (in the format 'Technology'):\n")))
+    values = values_generator()
+    session.add(investor.Financial(ticker=ticker, ebitda=next(values), sales=next(values),
+        net_profit=next(values), market_price=next(values), net_debt=next(values), assets=next(values),
+        equity=next(values), cash_equivalents=next(values), liabilities=next(values)))
+    session.commit()
+    session.close()
+    print('Company created successfully!')
+
+
+def values_generator():
+    for x in ("ebitda,sales,net_profit,market_price,net_debt,assets,equity,cash_equivalents,liabilities".split(",")):
+        try:
+            y = float(input(f"Enter {x.replace('_', ' ')} (in the format '987654321'):\n"))
+        except ValueError:
+            y = None
+        yield y
 
 
 def read_company():
@@ -90,6 +111,5 @@ def get_menu(menu: dict[str, str]) -> str:
 
 
 if __name__ == '__main__':
-    from investor import prepare_database
-    prepare_database()
+    investor.prepare_database()
     main()
