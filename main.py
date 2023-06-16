@@ -84,7 +84,35 @@ def values_generator():
 
 
 def read_company():
-    ...
+    session = investor.Session()
+    company_name = input("Enter company name:\n")
+    found = session.query(investor.Companies).filter(investor.Companies.name.like(f'%{company_name}%'))
+    if len(found) == 0:
+        print("Company not found!")
+    else:
+        for i, company in enumerate(found):
+            print(f"{i} {company.name}")
+        try:
+            company = found[int(input("Enter company number:\n"))]
+        except (ValueError, IndexError):
+            print("Invalid input!")
+        else:
+            print(company.name)
+            record = session.query(investor.Financial).filter(investor.Financial.ticker == company.ticker)[0]
+            print(f"P/E = {divide(record.market_price, record.net_profit)}")
+            print(f"P/S = {divide(record.market_price, record.sales)}")
+            print(f"P/B = {divide(record.market_price, record.assets)}")
+            print(f"ND/EBITDA = {divide(record.net_debt, record.ebitda)}")
+            print(f"ROE = {divide(record.net_profit, record.equity)}")
+            print(f"ROA = {divide(record.net_profit, record.assets)}")
+            print(f"L/A = {divide(record.liabilities, record.assets)}")
+    session.close()
+
+
+def divide(a, b):
+    if a is None or b is None or b == 0:
+        return None
+    return a / b
 
 
 def update_company():
