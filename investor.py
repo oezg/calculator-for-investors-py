@@ -1,9 +1,9 @@
 import csv
+import os.path
 import sqlalchemy.orm
 
 engine = sqlalchemy.create_engine("sqlite:///investor.db")
 Base = sqlalchemy.orm.declarative_base()
-Session = sqlalchemy.orm.sessionmaker(bind=engine)
 
 
 class Companies(Base):
@@ -29,15 +29,20 @@ class Financial(Base):
     liabilities = sqlalchemy.Column(sqlalchemy.Float)
 
 
+def get_session():
+    return sqlalchemy.orm.sessionmaker(bind=engine)()
+
+
 def prepare_database():
-    Base.metadata.create_all(engine)
-    read_companies()
-    read_financial()
+    if not os.path.exists('investor.db'):
+        Base.metadata.create_all(engine)
+        read_companies()
+        read_financial()
     print("Welcome to the Investor Program!")
 
 
 def read_companies():
-    session = Session()
+    session = get_session()
     with open("test/companies.csv") as companies_csv:
         companies_reader = csv.DictReader(companies_csv)
         for company in companies_reader:
@@ -47,7 +52,7 @@ def read_companies():
 
 
 def read_financial():
-    session = Session()
+    session = get_session()
     with open("test/financial.csv") as financial_csv:
         financial_reader = csv.DictReader(financial_csv)
         for financial in financial_reader:
