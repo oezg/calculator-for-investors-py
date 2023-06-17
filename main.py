@@ -64,11 +64,12 @@ def create_company():
     session = investor.Session()
     ticker = input("Enter ticker (in the format 'MOON'):\n")
     session.add(investor.Companies(ticker=ticker, name=input("Enter company (in the format 'Moon Corp'):\n"),
-        sector=input("Enter industries (in the format 'Technology'):\n")))
+                                   sector=input("Enter industries (in the format 'Technology'):\n")))
     values = values_generator()
     session.add(investor.Financial(ticker=ticker, ebitda=next(values), sales=next(values),
-        net_profit=next(values), market_price=next(values), net_debt=next(values), assets=next(values),
-        equity=next(values), cash_equivalents=next(values), liabilities=next(values)))
+                                   net_profit=next(values), market_price=next(values), net_debt=next(values),
+                                   assets=next(values), equity=next(values), cash_equivalents=next(values),
+                                   liabilities=next(values)))
     session.commit()
     session.close()
     print('Company created successfully!')
@@ -84,9 +85,11 @@ def values_generator():
 
 
 def read_company():
-    if found := find_company_by_name():
-        name, record = found
-        print(name)
+    if found := find_company_name_and_ticker():
+        session = investor.Session()
+        record = session.query(investor.Financial).filter(investor.Financial.ticker == found[1])[0]
+        session.close()
+        print(found[0])
         print(f"P/E = {divide(record.market_price, record.net_profit)}")
         print(f"P/S = {divide(record.market_price, record.sales)}")
         print(f"P/B = {divide(record.market_price, record.assets)}")
@@ -96,7 +99,7 @@ def read_company():
         print(f"L/A = {divide(record.liabilities, record.assets)}")
 
 
-def find_company_by_name():
+def find_company_name_and_ticker():
     company_name = input("Enter company name:\n")
     session = investor.Session()
     found = session.query(investor.Companies).filter(investor.Companies.name.like(f'%{company_name}%'))
@@ -109,8 +112,7 @@ def find_company_by_name():
     except (ValueError, IndexError):
         print("Invalid input!")
     else:
-        record = session.query(investor.Financial).filter(investor.Financial.ticker == company.ticker)[0]
-        return company.name, record
+        return company.name, company.ticker
     finally:
         session.close()
 
@@ -122,7 +124,16 @@ def divide(a, b):
 
 
 def update_company():
-    session = investor.Session()
+    if found := find_company_name_and_ticker():
+        values = values_generator()
+        session = investor.Session()
+        record = session.query(investor.Financial).filter(investor.Financial.ticker == found[1])
+        record.update({'ebitda': next(values), 'sales': next(values), 'net_profit': next(values),
+                       'market_price': next(values), 'net_debt': next(values), 'assets': next(values),
+                       'equity': next(values), 'cash_equivalents': next(values), 'liabilities': next(values)})
+        session.commit()
+        session.close()
+        print("Company updated successfully!")
 
 
 
