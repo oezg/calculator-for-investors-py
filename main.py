@@ -1,4 +1,5 @@
 from investor import *
+from sqlalchemy import func, desc
 
 MAIN_MENU = {
     'name': 'MAIN MENU',
@@ -52,12 +53,32 @@ def crud() -> None:
 
 
 def top_ten() -> None:
-    match get_option(TOP_TEN_MENU):
-        case '0':
-            main()
-        case _:
-            print('Not implemented!')
-            main()
+    option = input(get_menu(TOP_TEN_MENU))
+    if option in ('1', '2', '3'):
+        match option:
+            case '1':
+                lst = get_top_ten(Financial.net_debt, Financial.ebitda)
+            case '2':
+                lst = get_top_ten(Financial.net_profit, Financial.equity)
+            case _:
+                lst = get_top_ten(Financial.net_profit, Financial.assets)
+        list_top_ten(option, lst)
+    elif option != '0':
+        print('Invalid option!')
+    main()
+
+
+def list_top_ten(option, lst):
+    print(TOP_TEN_MENU[option].replace('List by', 'TICKER'))
+    for company in lst:
+        print(f"{company.ticker} {round(company.ratio, 2)}")
+
+
+def get_top_ten(a, b):
+    session = get_session()
+    lst = session.query(Financial.ticker, func.round(a / b, 2).label('ratio')).order_by(desc('ratio')).limit(10).all()
+    session.close()
+    return lst
 
 
 def create_company():
