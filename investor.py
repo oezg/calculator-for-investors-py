@@ -1,9 +1,18 @@
 import csv
 import os.path
 import sqlalchemy.orm
+from contextlib import contextmanager
 
 engine = sqlalchemy.create_engine("sqlite:///investor.db")
 Base = sqlalchemy.orm.declarative_base()
+
+
+@contextmanager
+def session_manager():
+    session = sqlalchemy.orm.sessionmaker(bind=engine)()
+    yield session
+    session.commit()
+    session.close()
 
 
 class Companies(Base):
@@ -29,11 +38,7 @@ class Financial(Base):
     liabilities = sqlalchemy.Column(sqlalchemy.Float)
 
 
-def get_session():
-    return sqlalchemy.orm.sessionmaker(bind=engine)()
-
-
-def prepare_database():
+def prepare_database() -> None:
     if not os.path.exists('investor.db'):
         Base.metadata.create_all(engine)
         read_companies()
@@ -41,23 +46,18 @@ def prepare_database():
     print("Welcome to the Investor Program!")
 
 
-def read_companies():
-    session = get_session()
-    with open("test/companies.csv") as companies_csv:
-        companies_reader = csv.DictReader(companies_csv)
+def read_companies() -> None:
+    with open("test/companies.csv") as csv_file, session_manager() as session:
+        companies_reader = csv.DictReader(csv_file)
         for company in companies_reader:
             session.add(Companies(ticker=company['ticker'], name=company['name'], sector=company['sector']))
-        session.commit()
-    session.close()
 
 
-def read_financial():
-    session = get_session()
-    with open("test/financial.csv") as financial_csv:
-        financial_reader = csv.DictReader(financial_csv)
+def read_financial() -> None:
+    with open("test/financial.csv") as csv_file, session_manager() as session:
+        financial_reader = csv.DictReader(csv_file)
         for financial in financial_reader:
-            session.add(
-                Financial(
+            session.add(Financial(
                     ticker=financial['ticker'],
                     ebitda=financial['ebitda'] if financial['ebitda'] else None,
                     sales=financial['sales'] if financial['sales'] else None,
@@ -67,8 +67,4 @@ def read_financial():
                     assets=financial['assets'] if financial['assets'] else None,
                     equity=financial['equity'] if financial['equity'] else None,
                     cash_equivalents=financial['cash_equivalents'] if financial['cash_equivalents'] else None,
-                    liabilities=financial['liabilities'] if financial['liabilities'] else None,
-                )
-            )
-        session.commit()
-    session.close()
+                    liabilities=financial['liabilities'] if financial['liabilities'] else None))

@@ -57,42 +57,38 @@ def top_ten() -> None:
     if option in ('1', '2', '3'):
         match option:
             case '1':
-                lst = get_top_ten(Financial.net_debt, Financial.ebitda)
+                top_ten_companies = get_top_ten(Financial.net_debt, Financial.ebitda)
             case '2':
-                lst = get_top_ten(Financial.net_profit, Financial.equity)
+                top_ten_companies = get_top_ten(Financial.net_profit, Financial.equity)
             case _:
-                lst = get_top_ten(Financial.net_profit, Financial.assets)
-        list_top_ten(option, lst)
+                top_ten_companies = get_top_ten(Financial.net_profit, Financial.assets)
+        list_top_ten(option, top_ten_companies)
     elif option != '0':
         print('Invalid option!')
     main()
 
 
-def list_top_ten(option, lst):
+def list_top_ten(option: str, top_ten_companies: list) -> None:
     print(TOP_TEN_MENU[option].replace('List by', 'TICKER'))
-    for company in lst:
+    for company in top_ten_companies:
         print(f"{company.ticker} {round(company.ratio, 2)}")
 
 
-def get_top_ten(a, b):
-    session = get_session()
-    lst = session.query(Financial.ticker, func.round(a / b, 2).label('ratio')).order_by(desc('ratio')).limit(10).all()
-    session.close()
-    return lst
+def get_top_ten(a: float, b: float) -> list:
+    with session_manager() as session:
+        return session.query(Financial.ticker, func.round(a / b, 2).label('ratio')).order_by(desc('ratio')).limit(10).all()
 
 
-def create_company():
-    session = get_session()
-    ticker = input("Enter ticker (in the format 'MOON'):\n")
-    session.add(Companies(ticker=ticker, name=input("Enter company (in the format 'Moon Corp'):\n"),
-                          sector=input("Enter industries (in the format 'Technology'):\n")))
-    values = values_generator()
-    session.add(Financial(ticker=ticker, ebitda=next(values), sales=next(values),
-                          net_profit=next(values), market_price=next(values), net_debt=next(values),
-                          assets=next(values), equity=next(values), cash_equivalents=next(values),
-                          liabilities=next(values)))
-    session.commit()
-    session.close()
+def create_company() -> None:
+    with session_manager() as session:
+        ticker = input("Enter ticker (in the format 'MOON'):\n")
+        session.add(Companies(ticker=ticker, name=input("Enter company (in the format 'Moon Corp'):\n"),
+                              sector=input("Enter industries (in the format 'Technology'):\n")))
+        values = values_generator()
+        session.add(Financial(ticker=ticker, ebitda=next(values), sales=next(values),
+                              net_profit=next(values), market_price=next(values), net_debt=next(values),
+                              assets=next(values), equity=next(values), cash_equivalents=next(values),
+                              liabilities=next(values)))
     print('Company created successfully!')
 
 
@@ -105,11 +101,10 @@ def values_generator():
         yield y
 
 
-def read_company():
+def read_company() -> None:
     if found := find_company_name_and_ticker():
-        session = get_session()
-        record = session.query(Financial).filter(Financial.ticker == found[1])[0]
-        session.close()
+        with session_manager() as session:
+            record = session.query(Financial).filter(Financial.ticker == found[1])[0]
         print(found[1], found[0])
         print(f"P/E = {divide(record.market_price, record.net_profit)}")
         print(f"P/S = {divide(record.market_price, record.sales)}")
@@ -120,13 +115,11 @@ def read_company():
         print(f"L/A = {divide(record.liabilities, record.assets)}")
 
 
-def find_company_name_and_ticker():
-    session = get_session()
-    found = session.query(Companies).filter(Companies.name.like('%{}%'.format(input("Enter company name:\n")))).all()
+def find_company_name_and_ticker() -> None | tuple:
+    with session_manager() as session:
+        found = session.query(Companies).filter(Companies.name.like('%{}%'.format(input("Enter company name:\n")))).all()
     if not found:
-        print("Company not found!")
-        session.close()
-        return
+        return print("Company not found!")
     for i, company in enumerate(found):
         print(f"{i} {company.name}")
     try:
@@ -135,45 +128,38 @@ def find_company_name_and_ticker():
         print("Invalid input!")
     else:
         return company.name, company.ticker
-    finally:
-        session.close()
 
 
-def divide(a, b):
+def divide(a: float, b: float) -> None | float:
     if a is None or b is None or b == 0:
         return None
     return round(a / b, 2)
 
 
-def update_company():
+def update_company() -> None:
     if found := find_company_name_and_ticker():
         values = values_generator()
-        session = get_session()
-        record = session.query(Financial).filter(Financial.ticker == found[1])
-        record.update({'ebitda': next(values), 'sales': next(values), 'net_profit': next(values),
-                       'market_price': next(values), 'net_debt': next(values), 'assets': next(values),
-                       'equity': next(values), 'cash_equivalents': next(values), 'liabilities': next(values)})
-        session.commit()
-        session.close()
+        with session_manager() as session:
+            session.query(Financial).filter(Financial.ticker == found[1]) \
+                .update({'ebitda': next(values), 'sales': next(values), 'net_profit': next(values),
+                         'market_price': next(values), 'net_debt': next(values), 'assets': next(values),
+                         'equity': next(values), 'cash_equivalents': next(values), 'liabilities': next(values)})
         print("Company updated successfully!")
 
 
-def delete_company():
+def delete_company() -> None:
     if found := find_company_name_and_ticker():
-        session = get_session()
-        session.query(Companies).filter(Companies.ticker == found[1]).delete()
-        session.query(Financial).filter(Financial.ticker == found[1]).delete()
-        session.commit()
-        session.close()
+        with session_manager() as session:
+            session.query(Companies).filter(Companies.ticker == found[1]).delete()
+            session.query(Financial).filter(Financial.ticker == found[1]).delete()
         print("Company deleted successfully!")
 
 
-def list_all_companies():
+def list_all_companies() -> None:
     print("COMPANY LIST")
-    session = get_session()
-    for company in session.query(Companies).order_by(Companies.ticker).all():
-        print(f"{company.ticker} {company.name} {company.sector}")
-    session.close()
+    with session_manager() as session:
+        for company in session.query(Companies).order_by(Companies.ticker).all():
+            print(f"{company.ticker} {company.name} {company.sector}")
 
 
 def get_option(menu: dict[str, str]) -> str:
